@@ -1,0 +1,10 @@
+version: "3"
+services:
+  springbootapp:
+    image: 0.0.1/vodacommft:latest
+    network_mode: bridge
+    ports:
+      - 8089
+    volumes:
+      - /Users/rchennupati/Documents/momentum/Personal/vodacom/:/Users/rchennupati/Documents/momentum/Personal/vodacom/
+    restart: unless-stopped

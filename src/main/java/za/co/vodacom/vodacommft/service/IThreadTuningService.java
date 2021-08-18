@@ -5,5 +5,5 @@ import java.util.List;
 
 public interface IThreadTuningService {
 
-    void doFileProcessingWithThreads(List<String[]> pendingDeliveryList, String workDirectory, String localDirectory) throws IOException;
+    void doFileProcessingWithThreads(String consumerCode, String routeShortName, String workDirectory, String localDirectory) throws IOException;
 }

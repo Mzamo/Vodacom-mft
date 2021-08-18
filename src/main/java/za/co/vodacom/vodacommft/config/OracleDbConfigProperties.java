@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Configuration
-@PropertySource(value={"file:${app.SFG_HOME}/si_globals/si_global.properties",
-        "file:${app.SI_INSTALL}/properties/sandbox.cfg",
-        "file:${app.SI_INSTALL}/properties/jdbc_customer.properties"})
+@PropertySource(value={"file:${app.SFG_HOME}/si_global.properties",
+        "file:${app.SI_INSTALL}/sandbox.cfg",
+        "file:${app.SI_INSTALL}/jdbc_customer.properties"})
 public class OracleDbConfigProperties {
 
     @Autowired

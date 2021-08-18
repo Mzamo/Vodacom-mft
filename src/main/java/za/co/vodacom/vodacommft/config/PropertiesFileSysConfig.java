@@ -31,10 +31,11 @@ import java.util.Date;
         ignoreResourceNotFound = true)*/
 @Component
 @Configuration
-@PropertySource(value = {"file:${app.SI_INSTALL}/properties/VC_collection.properties",
-        "file:${app.SI_INSTALL}/properties/vc_delivery.properties",
-        "file:${app.SFG_HOME}/si_globals/si_global.properties", "file:${app.SI_INSTALL}/properties/vc.properties"
-        ,"file:${app.SI_INSTALL}/properties/vc_ageanalysis.properties"})
+@PropertySource(value = {"file:${app.SI_INSTALL}/VC_collection.properties",
+        "file:${app.SI_INSTALL}/vc_delivery.properties",
+        "file:${app.SFG_HOME}/si_global.properties",
+        "file:${app.SI_INSTALL}/vc.properties",
+        "file:${app.SI_INSTALL}/vc_ageanalysis.properties"})
 public class PropertiesFileSysConfig {
 
     @Autowired

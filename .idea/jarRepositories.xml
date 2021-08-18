@@ -8,6 +8,16 @@
     </remote-repository>
     <remote-repository>
       <option name="id" value="central" />
+      <option name="name" value="libs-release" />
+      <option name="url" value="https://mmi-artifactory.mmih.biz/artifactory/libs-release" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="btssnapshot" />
+      <option name="name" value="btssnapshot" />
+      <option name="url" value="https://mmi-artifactory.mmih.biz/artifactory/bts-snapshot" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
       <option name="name" value="Maven Central repository" />
       <option name="url" value="https://repo1.maven.org/maven2" />
     </remote-repository>
@@ -15,6 +25,16 @@
       <option name="id" value="jboss.community" />
       <option name="name" value="JBoss Community repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="btsrelease" />
+      <option name="name" value="btsrelease" />
+      <option name="url" value="https://mmi-artifactory.mmih.biz/artifactory/bts-release" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="snapshots" />
+      <option name="name" value="libs-snapshot" />
+      <option name="url" value="https://mmi-artifactory.mmih.biz/artifactory/libs-snapshot" />
     </remote-repository>
   </component>
 </project>

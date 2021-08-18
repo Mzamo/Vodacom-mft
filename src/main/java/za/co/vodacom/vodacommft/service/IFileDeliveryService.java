@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface IFileDeliveryService {
 
-    void deliveryProcessing(List<String[]> pendingDeliveryList);
+    void deliveryProcessing(String consumerCode, String routeShortName);
 }

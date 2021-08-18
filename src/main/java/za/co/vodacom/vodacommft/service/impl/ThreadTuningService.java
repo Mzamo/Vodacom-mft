@@ -1,9 +1,8 @@
 package za.co.vodacom.vodacommft.service.impl;
 
 import com.jcraft.jsch.SftpException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import za.co.vodacom.vodacommft.dto.DeliveryDetailsDTO;
 import za.co.vodacom.vodacommft.service.*;
@@ -21,105 +20,65 @@ import java.util.concurrent.ThreadPoolExecutor;
  * @author ncubeh on 2020/08/23
  * @package za.co.vodacom.vodacomMFT.service.impl
  */
+@SuppressWarnings("all")
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class ThreadTuningService implements IThreadTuningService {
-    private final static Logger thread_service_logger = LoggerFactory.getLogger(MFTValidationService.class);
 
-    private static ThreadPoolExecutor threadPoolExecutorSplitter = null;
-    private static ThreadPoolExecutor threadPoolExecutorTen = null;
-    private static ThreadPoolExecutor threadPoolExecutorFive = null;
-    private static ThreadPoolExecutor threadPoolExecutorTwo = null;
+    private ThreadPoolExecutor threadPoolExecutorTen = null;
+    private ThreadPoolExecutor threadPoolExecutorFive = null;
+    private ThreadPoolExecutor threadPoolExecutorTwo = null;
 
-    @Autowired
-    private IDeliveryDetailsService deliveryDetailsService;
-
-    @Autowired
-    private IDeliveryService deliveryService;
-
-    @Autowired
-    private IDirectoryService directory_service;
-
-    @Autowired
-    private ILockService lockService;
+    final private IDeliveryDetailsService deliveryDetailsService;
+    final private IDeliveryService deliveryService;
+    final private IDirectoryService directory_service;
+    final private ILockService lockService;
 
 
     @Override
-    public void doFileProcessingWithThreads(List<String[]> pendingDeliveryList, String workDirectory, String localDirectory) throws IOException {
+    public void doFileProcessingWithThreads(String consumerCode, String routeShortName, String workDirectory, String localDirectory) throws IOException {
 
-        int totalActiveThreads = 0;
-        if (threadPoolExecutorSplitter != null && !threadPoolExecutorSplitter.isShutdown()) totalActiveThreads += threadPoolExecutorSplitter.getActiveCount();
-        if (threadPoolExecutorTen != null && !threadPoolExecutorTen.isShutdown()) totalActiveThreads += threadPoolExecutorTen.getActiveCount();
-        if (threadPoolExecutorFive != null && !threadPoolExecutorFive.isShutdown()) totalActiveThreads += threadPoolExecutorFive.getActiveCount();
-        if (threadPoolExecutorTwo != null && !threadPoolExecutorTwo.isShutdown()) totalActiveThreads += threadPoolExecutorTwo.getActiveCount();
+        BufferedWriter bw_del = null;
+        try {
+            String logFile = workDirectory + consumerCode + ".log";
+            bw_del = createLogFile(logFile);
+            directory_service.cleanTempWorkingDeliveryFiles(logFile);
 
-        if (totalActiveThreads < 30) {
-            if (pendingDeliveryList != null && pendingDeliveryList.size() > 0) {
-                if (threadPoolExecutorSplitter == null || threadPoolExecutorSplitter.isShutdown()) threadPoolExecutorSplitter = (ThreadPoolExecutor)Executors.newFixedThreadPool(5);
-                CountDownLatch latch = new CountDownLatch(pendingDeliveryList.size());
-                for (String[] pendingDelivery : pendingDeliveryList) {
-                    threadPoolExecutorSplitter.execute(() -> {
-                        String consumerCode = pendingDelivery[0];
-                        String routeShortName = pendingDelivery[1];
-                        BufferedWriter bw_del = null;
-                        try {
-                            String logFile = workDirectory + consumerCode + ".log";
-                            bw_del = createLogFile(logFile);
-                            directory_service.cleanTempWorkingDeliveryFiles(logFile);
+            if (!lockService.checkIfLockExits(consumerCode)) {
+                bw_del.write(LocalDateTime.now() + "  No Locks For Delivery ITEM_NAME :- " + consumerCode + "\nLocking And Delivery File Processing.....");
+                bw_del.newLine();
 
-                            if (!lockService.checkIfLockExits(consumerCode)) {
-                                bw_del.write(LocalDateTime.now() + "  No Locks For Delivery ITEM_NAME :- " + consumerCode + "\nLocking And Delivery File Processing.....");
-                                bw_del.newLine();
+                if (lockService.addLock(consumerCode)) {
 
-                                if (lockService.addLock(consumerCode)) {
+                    String deliveryCode = consumerCode + "~" + routeShortName;
+                    String workingDirectory = localDirectory + deliveryCode + "/";
+                    directory_service.createDeliveryWorkingDirectories(workingDirectory);
+                    directory_service.cleanTempWorkingDeliveryFiles(workingDirectory);
 
-                                    String deliveryCode = consumerCode + "~" + routeShortName;
-                                    String workingDirectory = localDirectory + deliveryCode + "/";
-                                    directory_service.createDeliveryWorkingDirectories(workingDirectory);
-                                    directory_service.cleanTempWorkingDeliveryFiles(workingDirectory);
+                    DeliveryDetailsDTO deliveryDetails = deliveryDetailsService.getDeliveriesByConsumerCodeAndRouteShortName(consumerCode, routeShortName);
+                    if (deliveryDetails != null) {
+                        List<String> files = deliveryDetails.getList_of_file_metadata();
+                        int fileCount = files.size();
 
-                                    DeliveryDetailsDTO deliveryDetails = deliveryDetailsService.getDeliveriesByConsumerCodeAndRouteShortName(consumerCode, routeShortName);
-                                    if (deliveryDetails != null) {
-                                        List<String> files = deliveryDetails.getList_of_file_metadata();
-                                        int fileCount = files.size();
-
-                                        if (fileCount > 0 && fileCount <= 20) {
-                                            doDeliveryWithTwoThreads(deliveryDetails, fileCount);
-                                            latch.countDown();
-                                        } else if (fileCount > 20 && fileCount <= 50) {
-                                            doDeliveryWithFiveThreads(deliveryDetails, fileCount);
-                                            latch.countDown();
-                                        } else if (fileCount > 50) {
-                                            doDeliveryWithTenThreads(deliveryDetails, fileCount);
-                                            latch.countDown();
-                                        } else {
-                                            latch.countDown();
-                                        }
-                                    }
-                                } else {
-                                    latch.countDown();
-                                }
-                            } else {
-                                latch.countDown();
-                            }
-                        }catch (IOException e){
-                            thread_service_logger.error("Error while routing file processing ", e);
-                        } finally {
-                            if(!threadPoolExecutorSplitter.isShutdown())threadPoolExecutorSplitter.shutdown();
-                            if (bw_del != null) {
-                                try {
-                                    bw_del.close();
-                                } catch (IOException e) {
-                                    thread_service_logger.error("Failed to close Buffered Writer", e);
-                                }
-                            }
+                        if (fileCount > 0 && fileCount <= 100) {
+                            doDeliveryWithTwoThreads(deliveryDetails, fileCount);
+                        } else if (fileCount > 100 && fileCount <= 500) {
+                            doDeliveryWithFiveThreads(deliveryDetails, fileCount);
+                        } else if (fileCount > 500) {
+                            doDeliveryWithTenThreads(deliveryDetails, fileCount);
                         }
-                    });
+                    }
                 }
-
+            }
+        }catch (IOException e){
+            log.error("Error while routing file processing ", e);
+        } finally {
+            if (bw_del != null) {
                 try {
-                    latch.await();
-                } catch (InterruptedException e) {
-                    thread_service_logger.error("Failed to wait for threads doing files routing", e);
+                    bw_del.close();
+                } catch (IOException e) {
+                    log.error("Failed to close Buffered Writer", e);
                 }
             }
         }
@@ -135,13 +94,13 @@ public class ThreadTuningService implements IThreadTuningService {
                         deliveryService.deliveryFileProcessing(deliveryDetails, fileName);
                         latch.countDown();
                     } catch (IOException | SftpException e) {
-                        thread_service_logger.error("Failed to process the file " + fileName + " with the following error message", e);
+                        log.error("Failed to process the file " + fileName + " with the following error message", e);
                     }
                 });
             }
             latch.await();
         }catch (InterruptedException e) {
-            thread_service_logger.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
+            log.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
         } finally {
             lockService.releaseLock(deliveryDetails.getConsumerCode());
             if(!threadPoolExecutorTen.isShutdown())threadPoolExecutorTen.shutdown();
@@ -158,13 +117,13 @@ public class ThreadTuningService implements IThreadTuningService {
                         deliveryService.deliveryFileProcessing(deliveryDetails, fileName);
                         latch.countDown();
                     } catch (IOException | SftpException e) {
-                        thread_service_logger.error("Failed to process the file " + fileName + " with the following error message", e);
+                        log.error("Failed to process the file " + fileName + " with the following error message", e);
                     }
                 });
             }
             latch.await();
         }catch (InterruptedException e) {
-            thread_service_logger.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
+            log.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
         } finally {
             lockService.releaseLock(deliveryDetails.getConsumerCode());
             if(!threadPoolExecutorFive.isShutdown())threadPoolExecutorFive.shutdown();
@@ -181,13 +140,13 @@ public class ThreadTuningService implements IThreadTuningService {
                         deliveryService.deliveryFileProcessing(deliveryDetails, fileName);
                         latch.countDown();
                     } catch (IOException | SftpException e) {
-                        thread_service_logger.error("Failed to process the file " + fileName + " with the following error message", e);
+                        log.error("Failed to process the file " + fileName + " with the following error message", e);
                     }
                 });
             }
             latch.await();
         }catch (InterruptedException e) {
-            thread_service_logger.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
+            log.error("Failed while processing consumer code " + deliveryDetails.getConsumerCode() + " route short name" + deliveryDetails.getRouteShortName(), e);
         } finally {
             lockService.releaseLock(deliveryDetails.getConsumerCode());
             if(!threadPoolExecutorTwo.isShutdown())threadPoolExecutorTwo.shutdown();

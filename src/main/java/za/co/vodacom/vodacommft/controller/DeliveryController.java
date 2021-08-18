@@ -4,36 +4,36 @@ package za.co.vodacom.vodacommft.controller;
  * @package za.co.vodacom.vodacomMFT.dto
  */
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import za.co.vodacom.vodacommft.dto.DeliveryCodeDTO;
 import za.co.vodacom.vodacommft.service.IFileDeliveryService;
-import za.co.vodacom.vodacommft.service.impl.FileDeliveryService;
-
-import javax.validation.Valid;
 
 
 @RestController
+@RequestMapping("/v1/deliver")
+@RequiredArgsConstructor
 public class DeliveryController {
 
-    private IFileDeliveryService deliveryService;
+    final private IFileDeliveryService deliveryService;
 
-    public DeliveryController(FileDeliveryService deliveryService) {
-        this.deliveryService = deliveryService;
+    @GetMapping(value = "/{consumerCode}/{routeShortName}")
+    public ResponseEntity updateTodo(@PathVariable String consumerCode, @PathVariable String routeShortName){
+
+        try {
+            System.out.println("check1================================= ");
+            deliveryProcessing(consumerCode, routeShortName);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    @PostMapping(path="/deliver")
-    @ResponseStatus(code = HttpStatus.ACCEPTED)
-    public ResponseEntity updateTodo(@Valid @RequestBody DeliveryCodeDTO deliveryCodeDTO){
-        deliveryProcessing(deliveryCodeDTO);
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    private void deliveryProcessing(DeliveryCodeDTO deliveryCodeDTO) {
-//        deliveryService.deliveryProcessing(deliveryCodeDTO.getConsumerCode(), deliveryCodeDTO.getRouteShortName());
+    private void deliveryProcessing(String consumerCode, String routeShortName) {
+        deliveryService.deliveryProcessing(consumerCode, routeShortName);
     }
 }
