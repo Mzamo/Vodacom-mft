@@ -1,5 +1,6 @@
 package za.co.vodacom.vodacommft.service;
 
+import org.apache.commons.compress.archivers.ArchiveException;
 import za.co.vodacom.vodacommft.entity.sfg_cfg.DeliveryDetailsEntity;
 
 import java.io.BufferedWriter;
@@ -20,7 +21,7 @@ public interface ICompressService {
                         String file_value_2,
                         String file_value_6,
                         String threadName,
-                        BufferedWriter bw_cmp) throws IOException;
+                        BufferedWriter bw_cmp) throws IOException, ArchiveException;
 
     String decompressFile(String fileNameOnDisc,
                           String fileName,

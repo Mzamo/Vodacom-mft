@@ -4,11 +4,11 @@ package za.co.vodacom.vodacommft.service.impl;
  * @package za.co.vodacom.vodacomMFT.service.impl
  */
 
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import za.co.vodacom.vodacommft.config.PropertiesFileSysConfig;
 import za.co.vodacom.vodacommft.service.IDirectoryService;
@@ -17,19 +17,23 @@ import za.co.vodacom.vodacommft.service.ILockService;
 import za.co.vodacom.vodacommft.service.IThreadTuningService;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class FileDeliveryService implements IFileDeliveryService {
     private static final Logger logger = LoggerFactory.getLogger(FileDeliveryService.class);
 
-    private final PropertiesFileSysConfig systemCfgProperties;
-    private  final IDirectoryService directory_service;
-    private final ILockService lockService;
+    @Autowired
+    private PropertiesFileSysConfig systemCfgProperties;
+
+    @Autowired
+    private  IDirectoryService directory_service;
+
+    @Autowired
+    private ILockService lockService;
+
+    @Autowired
+    private IThreadTuningService threadTuningService;
 
 
     @Override
@@ -47,7 +51,6 @@ public class FileDeliveryService implements IFileDeliveryService {
                     String routeShortName = pendingDelivery[1];
                     try {
                         if (lockService.addLock(consumerCode)) {
-                            IThreadTuningService threadTuningService = new ThreadTuningService();
                             threadTuningService.doFileProcessing(consumerCode, routeShortName, workDirectory, localDirectory);
                         }
                     } catch (Exception e) {

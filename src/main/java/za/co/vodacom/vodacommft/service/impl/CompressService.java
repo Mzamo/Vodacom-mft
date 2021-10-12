@@ -4,11 +4,14 @@ package za.co.vodacom.vodacommft.service.impl;
  * @package za.co.vodacom.vodacomMFT.service.impl
  */
 
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +44,7 @@ public class CompressService implements ICompressService {
                                String file_value_2,
                                String file_value_6,
                                String threadName,
-                               BufferedWriter bw_cmp) throws IOException {
+                               BufferedWriter bw_cmp) throws IOException, ArchiveException {
 
         String file_name_value_2 = "";
         String file_name_value_6 = "";
@@ -114,6 +117,7 @@ public class CompressService implements ICompressService {
             case "gzip": case "gz": {
                 compress_logger.info(new Date().toString() + ": GZip File Compression for :- " + temp_file_to_compress + " To  : " + temp_file_to_compress + "." + compress_ext);
                 String compressFileName = getCompressNameUtility(actualFile, compress_extension);
+                System.out.println("compressFileName ====================== " + compressFileName);
 
                 Path gzip_file_is_compressed = Paths.get(compressFileName);
                 InputStream fis = Files.newInputStream(temp_file_to_compress);
@@ -150,12 +154,24 @@ public class CompressService implements ICompressService {
                 compress_logger.info(": Tar File Compression for :- " + temp_file_to_compress + " To  : " + temp_file_to_compress + "." + compress_ext);
                 String compressFileName = getCompressNameUtility(actualFile, compress_extension);
 
-                //Path tar_to_compress = Paths.get(temp_file_to_compress.toFile().getAbsolutePath() + compress_extension);
+                TarArchiveOutputStream tos = null;
+                try {
+                    tos = (TarArchiveOutputStream) new ArchiveStreamFactory().createArchiveOutputStream("tar", new FileOutputStream(compressFileName));
+
+                    TarArchiveEntry entry = new TarArchiveEntry(temp_file_to_compress.toFile());
+                    entry.setName(temp_file_to_compress.toFile().getName());
+
+                    tos.putArchiveEntry(entry);
+                    org.apache.commons.compress.utils.IOUtils.copy(new FileInputStream(source_file.toFile()), tos);
+                    tos.closeArchiveEntry();
+
+                    tos.finish();
+
+                }finally {
+                   if (tos != null) tos.close();
+                }
+
                 Path tar_to_compress = Paths.get(compressFileName);
-                doCompressATarArchiveFile(compressFileName);
-
-                compress_logger.info(": Tar File Compression Completed...");
-
                 file_name_value_2 = tar_to_compress.getFileName().toString();
                 file_name_value_6 = tar_to_compress.toFile().getAbsolutePath();
                 final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
@@ -364,7 +380,7 @@ public class CompressService implements ICompressService {
         }
     }
 
-    private void doCompressATarArchiveFile(String temp_file_to_compress) {
+    /*private void doCompressATarArchiveFile(String temp_file_to_compress) {
         TarArchiveOutputStream tarArchive = null;
 
         try {
@@ -374,11 +390,11 @@ public class CompressService implements ICompressService {
             OutputStream fos = Files.newOutputStream(local_tar_dir);
             GZIPOutputStream gzipOS = new GZIPOutputStream(new BufferedOutputStream(fos));
             tarArchive = new TarArchiveOutputStream(gzipOS);
-            /*when i tar a file its throw exception as “is too long ( > 100 bytes) TarArchiveOutputStream”*/
+            *//*when i tar a file its throw exception as “is too long ( > 100 bytes) TarArchiveOutputStream”*//*
             tarArchive.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
             addToArchiveTarGZFile(temp_file_to_compress, "", tarArchive);
 
-        } catch (IOException e) {
+        } catch (≈) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         } finally {
@@ -390,7 +406,44 @@ public class CompressService implements ICompressService {
                 e.printStackTrace();
             }
         }
+    }*/
 
+    private void doCompressATarArchiveFile(Path originalFile, String finalCompressedFileName) {
+
+        OutputStream fOut = null;
+        BufferedOutputStream buffOut = null;
+        GzipCompressorOutputStream gzOut = null;
+        TarArchiveOutputStream tOut = null;
+
+        try {
+            fOut = Files.newOutputStream(Paths.get(finalCompressedFileName));
+            buffOut = new BufferedOutputStream(fOut);
+            gzOut = new GzipCompressorOutputStream(buffOut);
+            tOut = new TarArchiveOutputStream(gzOut);
+
+                TarArchiveEntry tarEntry = new TarArchiveEntry(originalFile.toFile(), finalCompressedFileName);
+                tOut.putArchiveEntry(tarEntry);
+
+                // copy file to TarArchiveOutputStream
+                Files.copy(originalFile, tOut);
+
+                tOut.closeArchiveEntry();
+
+                tOut.finish();
+        }catch(IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+
+                if (tOut != null) tOut.close();
+                if (gzOut != null) gzOut.close();
+                if (buffOut != null) buffOut.close();
+                if (fOut != null) fOut.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void addToArchiveTarGZFile(String filePath, String parent, TarArchiveOutputStream tarArchive) throws IOException {

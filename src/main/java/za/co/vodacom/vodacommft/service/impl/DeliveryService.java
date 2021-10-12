@@ -7,6 +7,7 @@ package za.co.vodacom.vodacommft.service.impl;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPSClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +80,7 @@ public class DeliveryService implements IDeliveryService {
 
 
     @Override
-    public void deliveryFileProcessing(DeliveryDetailsDTO deliveryDetails, String fileName) throws IOException, SftpException {
+    public void deliveryFileProcessing(DeliveryDetailsDTO deliveryDetails, String fileName) throws IOException, ArchiveException, SftpException {
 
         BufferedWriter buff_buff = null;
         String threadName = Thread.currentThread().getName();
@@ -228,7 +229,7 @@ public class DeliveryService implements IDeliveryService {
         }
     }
 
-    private int ftpDeliveryFileProcessing(FTPClient ftp_client, DeliveryDetailsDTO deliveryDetails, String file_metadata, String threadName, BufferedWriter buff_buff) throws IOException, SftpException {
+    private int ftpDeliveryFileProcessing(FTPClient ftp_client, DeliveryDetailsDTO deliveryDetails, String file_metadata, String threadName, BufferedWriter buff_buff) throws IOException, ArchiveException, SftpException {
 
         String ftpHost = deliveryDetails.getFtp_host();
         String remoteHost = deliveryDetails.getSftpProfDetailsEntity().getRemote_host();
@@ -425,7 +426,7 @@ public class DeliveryService implements IDeliveryService {
 
 
     //These Methods will be generic, am tired now, ...
-    private int sftpDeliveryFileProcessing(ChannelSftp sftp_client, DeliveryDetailsDTO deliveryDetails, String fileName, String threadName, BufferedWriter buff_buff) throws IOException, SftpException {
+    private int sftpDeliveryFileProcessing(ChannelSftp sftp_client, DeliveryDetailsDTO deliveryDetails, String fileName, String threadName, BufferedWriter buff_buff) throws IOException, ArchiveException, SftpException {
 
         List<String> sftp_age_analysis_list = new ArrayList<>();
 
@@ -670,7 +671,7 @@ public class DeliveryService implements IDeliveryService {
 
 
     /*These Methods will be generic, am tired now, ... One method with a Switch*/
-    private int osCopyDeliveryFileProcessing(DeliveryDetailsDTO deliveryDetails, String fileName, String threadName, BufferedWriter buff_buff) throws IOException, SftpException {
+    private int osCopyDeliveryFileProcessing(DeliveryDetailsDTO deliveryDetails, String fileName, String threadName, BufferedWriter buff_buff) throws IOException, ArchiveException, SftpException {
 
         String date_to_file_append = getDateFormat();
         changePermissionCheck = "yes".equalsIgnoreCase(deliveryDetails.getDeliveryDetailsEntity().getChangeFilePermissions());
