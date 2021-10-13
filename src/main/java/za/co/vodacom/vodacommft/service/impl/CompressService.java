@@ -9,6 +9,8 @@ import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
@@ -76,84 +78,70 @@ public class CompressService implements ICompressService {
         }
 
         String extension = compress_ext.contains(".")? compress_ext.substring(compress_ext.lastIndexOf(".")+1) : compress_ext;
-        System.out.println("Sulla -Rams NOT working=============>  extension = " + extension);
-        switch(extension.toLowerCase()){
+        String compressFileName = getCompressNameUtility(actualFile, compress_extension);
+        switch(extension.toLowerCase()) {
             case "zip": {
                 compress_logger.info(LocalDateTime.now() + ": Zip File Compression for Location :- " + temp_file_to_compress.toFile().getAbsolutePath());
 
-               // String temp_file_is_compressed = temp_file_to_compress.toFile().getAbsolutePath() + compress_extension;
-                /*String compressFileName = "", tempExt = "", lastChar = "", checkChar = "";
+                InputStream fis = null;
+                ZipArchiveOutputStream zos = null;
+                try {
+                    zos = new ZipArchiveOutputStream(new FileOutputStream(compressFileName));
 
-                compressFileName = actualFile;
-                    if(compress_extension != null && !compress_extension.trim().equalsIgnoreCase("") && !compress_extension.trim().equalsIgnoreCase("none")){
-                        tempExt = compress_extension.trim();
-                        lastChar = compressFileName.substring(compressFileName.length()-1, compressFileName.length());
-                        checkChar = lastChar.toUpperCase();
-                        if(lastChar.equals(checkChar)){
-                            tempExt = tempExt.toUpperCase();
-                        }else{
-                            tempExt = tempExt.toLowerCase();
-                        }
-                        if(compressFileName.contains(".")){
-                            compressFileName = compressFileName.substring(0, compressFileName.lastIndexOf(".")) + compress_extension;
-                        }else{
-                            compressFileName = compressFileName + compress_extension;
-                        }
-                    }*/
-                String compressFileName = getCompressNameUtility(actualFile, compress_extension);
+                    ZipArchiveEntry entry = new ZipArchiveEntry(temp_file_to_compress.toFile(), temp_file_to_compress.toFile().getName());
+                    zos.putArchiveEntry(entry);
+                    fis = new FileInputStream(temp_file_to_compress.toFile());
+                    IOUtils.copy(fis, zos);
+                    zos.closeArchiveEntry();
 
-                zipCompressFile(temp_file_to_compress, compressFileName);
-                System.out.println(" Chatsha======= >>>    compressFileName = " + compressFileName);
-                //compressed_file_name = temp_file_is_compressed;
-                String[] fileNameTokens = compressFileName.split("/");
-                file_name_value_2 = fileNameTokens[fileNameTokens.length -1];
-                System.out.println("Chatsha =========== >  file_name_value_2 = " + file_name_value_2);
-                file_name_value_6 = compressFileName;
-                final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
-                System.out.println("Chatsha =======> final_compressed_file = " + final_compressed_file);
-
+                    zos.finish();
+                }finally {
+                    if (zos != null) zos.close();
+                    if (fis != null) fis.close();
+                }
                 break;
             }
-            case "gzip": case "gz": {
+            case "gzip":
+            case "gz": {
                 compress_logger.info(new Date().toString() + ": GZip File Compression for :- " + temp_file_to_compress + " To  : " + temp_file_to_compress + "." + compress_ext);
-                String compressFileName = getCompressNameUtility(actualFile, compress_extension);
-                System.out.println("compressFileName ====================== " + compressFileName);
 
+                InputStream fis = null;
+                GZIPOutputStream gzipOS = null;
                 Path gzip_file_is_compressed = Paths.get(compressFileName);
-                InputStream fis = Files.newInputStream(temp_file_to_compress);
-                GZIPOutputStream gzipOS = new GZIPOutputStream(Files.newOutputStream(gzip_file_is_compressed));
-                IOUtils.copy(fis, gzipOS);
-                gzipOS.close();
 
-                compress_logger.info(new Date().toString() + ": Zip File Compression Completed... " + gzip_file_is_compressed.toFile().getAbsolutePath() + "  : FileName:- " + gzip_file_is_compressed.getFileName());
-                file_name_value_2 = gzip_file_is_compressed.getFileName().toString();
-                file_name_value_6 = gzip_file_is_compressed.toFile().getAbsolutePath();
-                final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
-                System.out.println("======> gzipOS = " + gzipOS);
-
+                try {
+                    fis = new FileInputStream(temp_file_to_compress.toFile());
+                    gzipOS = new GZIPOutputStream(Files.newOutputStream(gzip_file_is_compressed));
+                    IOUtils.copy(fis, gzipOS);
+                } finally {
+                    if (gzipOS != null) gzipOS.close();
+                    if (fis != null) fis.close();
+                }
                 break;
             }
-            case "bzip": case "bz2": {
+            case "bzip":
+            case "bz2": {
                 compress_logger.info(new Date().toString() + ": BZip File Compression for :- " + temp_file_to_compress + " To  : " + temp_file_to_compress + "." + compress_ext);
-                String compressFileName = getCompressNameUtility(actualFile, compress_extension);
+
+                InputStream fis =  null;
+                BZip2CompressorOutputStream bzipOS = null;
                 Path bzip_file_to_compress = Paths.get(compressFileName);
-                InputStream fis = Files.newInputStream(temp_file_to_compress);
-                BZip2CompressorOutputStream bzipOS = new BZip2CompressorOutputStream(Files.newOutputStream(bzip_file_to_compress));
-                IOUtils.copy(fis, bzipOS);
-                compress_logger.info(new Date().toString() + ": BZip File Compression Completed...");
-                bzipOS.close();
 
-                file_name_value_2 = bzip_file_to_compress.getFileName().toString();
-                file_name_value_6 = bzip_file_to_compress.toFile().getAbsolutePath();
-                final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
-                System.out.println("=====>  bzipOS = " + bzipOS);
-
+                try {
+                    fis = Files.newInputStream(temp_file_to_compress);
+                    bzipOS = new BZip2CompressorOutputStream(Files.newOutputStream(bzip_file_to_compress));
+                    IOUtils.copy(fis, bzipOS);
+                } finally {
+                    if (bzipOS != null) bzipOS.close();
+                    if (fis != null) fis.close();
+                }
                 break;
             }
-            case "tar": case "tar.gz": {
+            case "tar":
+            case "tar.gz": {
                 compress_logger.info(": Tar File Compression for :- " + temp_file_to_compress + " To  : " + temp_file_to_compress + "." + compress_ext);
-                String compressFileName = getCompressNameUtility(actualFile, compress_extension);
 
+                InputStream fis =  null;
                 TarArchiveOutputStream tos = null;
                 try {
                     tos = (TarArchiveOutputStream) new ArchiveStreamFactory().createArchiveOutputStream("tar", new FileOutputStream(compressFileName));
@@ -162,21 +150,15 @@ public class CompressService implements ICompressService {
                     entry.setName(temp_file_to_compress.toFile().getName());
 
                     tos.putArchiveEntry(entry);
-                    org.apache.commons.compress.utils.IOUtils.copy(new FileInputStream(source_file.toFile()), tos);
+                    fis =  new FileInputStream(source_file.toFile());
+                    org.apache.commons.compress.utils.IOUtils.copy(fis, tos);
                     tos.closeArchiveEntry();
 
                     tos.finish();
-
                 }finally {
                    if (tos != null) tos.close();
+                    if (fis != null) fis.close();
                 }
-
-                Path tar_to_compress = Paths.get(compressFileName);
-                file_name_value_2 = tar_to_compress.getFileName().toString();
-                file_name_value_6 = tar_to_compress.toFile().getAbsolutePath();
-                final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
-                System.out.println("======> tar_to_compress = " + tar_to_compress);
-
                 break;
             }
             default: {
@@ -184,6 +166,12 @@ public class CompressService implements ICompressService {
                 break;
             }
         }
+
+        Path compressedFilePath = Paths.get(compressFileName);
+        file_name_value_2 = compressedFilePath.getFileName().toString();
+        file_name_value_6 = compressedFilePath.toFile().getAbsolutePath();
+        final_compressed_file = file_name_value_2 + ";" + file_name_value_6;
+
         return final_compressed_file;
     }
 
@@ -341,153 +329,4 @@ public class CompressService implements ICompressService {
         }
         return temp_directory;
     }
-
-    private void doCompressATarArchiveFileR(String temp_file_to_compress) throws IOException {
-        TarArchiveOutputStream tarArchive = null;
-        OutputStream fos = null;
-        GZIPOutputStream gzipOS = null;
-        InputStream fis = null;
-        BufferedInputStream bis = null;
-
-        try {
-            Path local_tar_dir = Paths.get(temp_file_to_compress);
-            compress_logger.info(": Tar File Name : " + local_tar_dir.getFileName());
-
-            fos = Files.newOutputStream(local_tar_dir);
-            gzipOS = new GZIPOutputStream(new BufferedOutputStream(fos));
-            tarArchive = new TarArchiveOutputStream(gzipOS);
-            /*when i tar a file its throw exception as “is too long ( > 100 bytes) TarArchiveOutputStream”*/
-            tarArchive.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-
-            Path file = Paths.get(temp_file_to_compress);
-            tarArchive.putArchiveEntry(new TarArchiveEntry(file.toFile(), ""));
-            fis = Files.newInputStream(file);
-            bis = new BufferedInputStream(fis);
-            // Write file content to archive
-            IOUtils.copy(bis, tarArchive);
-
-        } finally {
-
-
-            if (tarArchive != null) {
-                tarArchive.closeArchiveEntry();
-                tarArchive.close();
-            }
-            if (bis != null) bis.close();
-            if (fis != null) fis.close();
-            if (gzipOS != null) gzipOS.close();
-            if (fos != null) fos.close();
-        }
-    }
-
-    /*private void doCompressATarArchiveFile(String temp_file_to_compress) {
-        TarArchiveOutputStream tarArchive = null;
-
-        try {
-            Path local_tar_dir = Paths.get(temp_file_to_compress);
-            compress_logger.info(new Date().toString()+ ": Tar File Name : " + local_tar_dir.getFileName());
-
-            OutputStream fos = Files.newOutputStream(local_tar_dir);
-            GZIPOutputStream gzipOS = new GZIPOutputStream(new BufferedOutputStream(fos));
-            tarArchive = new TarArchiveOutputStream(gzipOS);
-            *//*when i tar a file its throw exception as “is too long ( > 100 bytes) TarArchiveOutputStream”*//*
-            tarArchive.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-            addToArchiveTarGZFile(temp_file_to_compress, "", tarArchive);
-
-        } catch (≈) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } finally {
-            try {
-                tarArchive.close();
-
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-    }*/
-
-    private void doCompressATarArchiveFile(Path originalFile, String finalCompressedFileName) {
-
-        OutputStream fOut = null;
-        BufferedOutputStream buffOut = null;
-        GzipCompressorOutputStream gzOut = null;
-        TarArchiveOutputStream tOut = null;
-
-        try {
-            fOut = Files.newOutputStream(Paths.get(finalCompressedFileName));
-            buffOut = new BufferedOutputStream(fOut);
-            gzOut = new GzipCompressorOutputStream(buffOut);
-            tOut = new TarArchiveOutputStream(gzOut);
-
-                TarArchiveEntry tarEntry = new TarArchiveEntry(originalFile.toFile(), finalCompressedFileName);
-                tOut.putArchiveEntry(tarEntry);
-
-                // copy file to TarArchiveOutputStream
-                Files.copy(originalFile, tOut);
-
-                tOut.closeArchiveEntry();
-
-                tOut.finish();
-        }catch(IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-
-                if (tOut != null) tOut.close();
-                if (gzOut != null) gzOut.close();
-                if (buffOut != null) buffOut.close();
-                if (fOut != null) fOut.close();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void addToArchiveTarGZFile(String filePath, String parent, TarArchiveOutputStream tarArchive) throws IOException {
-        Path file = Paths.get(filePath);
-        compress_logger.info(new Date().toString()+ ":  File  Path   " + file.toFile().getPath());
-        // Create entry name relative to parent file path
-        //for the archived file
-        String entryName = parent + file.getFileName();
-        System.out.println(" ==> EntryNameParent :-  " + parent + " :: EntryName:" + entryName);
-        System.out.println(" ==> entryName " + entryName);
-
-        tarArchive.putArchiveEntry(new TarArchiveEntry(file.toFile(), ""));
-        InputStream fis =Files.newInputStream(file);
-        BufferedInputStream bis = new BufferedInputStream(fis);
-        // Write file content to archive
-        org.apache.commons.io.IOUtils.copy(bis, tarArchive);
-        tarArchive.closeArchiveEntry();
-        bis.close();
-    }
-
-    /*public void processLinuxTarCommand(){
-
-        File file = new File(files_tobe_tared_dir);
-        String changeDirectory = "/bin/bash cd " + files_tobe_tared_dir;
-        String command = "tar -cvf "+files_tobe_tared_dir+ file.getName()+".tar * ";
-
-        try {
-            System.out.println("About to change Directory to :- " +changeDirectory);
-            Runtime.getRuntime().exec(changeDirectory);
-            System.out.println("Command " +command);
-            Process process = Runtime.getRuntime().exec(command);
-
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-
-            }
-
-            reader.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }*/
 }
